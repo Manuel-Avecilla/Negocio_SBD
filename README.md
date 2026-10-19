@@ -78,3 +78,45 @@ docker run -d \
   -v mariadb_data:/var/lib/mysql \
   smartruta-mariadb
 ```
+
+---
+
+Docker Compose
+
+```bash
+docker compose up -d --build
+```
+
+```bash
+docker compose down
+```
+
+Eliminar volúmenes persistentes (si es necesario)
+
+```bash
+docker compose down -v
+```
+
+---
+
+Python
+
+```bash
+cd python
+```
+
+```bash
+python3 -m venv venv
+```
+
+```bash
+source venv/bin/activate
+```
+
+```bash
+python -m pip install --upgrade pip
+```
+
+```bash
+pip install -r requirements.txt
+```

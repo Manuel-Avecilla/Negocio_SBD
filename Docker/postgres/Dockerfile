@@ -11,7 +11,7 @@ ENV POSTGRES_USER=${POSTGRES_USER}
 ENV POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 
 # Script SQL de inicialización que se ejecuta al arrancar el contenedor por primera vez
-COPY ./init.sql /docker-entrypoint-initdb.d/
+# COPY ./init.sql /docker-entrypoint-initdb.d/
 
 # Volumen persistente para los datos de PostgreSQL
 VOLUME ["/var/lib/postgresql/data"]

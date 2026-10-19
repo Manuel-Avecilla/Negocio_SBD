@@ -13,7 +13,7 @@ ENV MYSQL_DATABASE=${MYSQL_DATABASE}
 ENV MYSQL_USER=${MYSQL_USER}
 ENV MYSQL_PASSWORD=${MYSQL_PASSWORD}
 
-COPY ./init.sql /docker-entrypoint-initdb.d/
+# COPY ./init.sql /docker-entrypoint-initdb.d/
 
 # Creamos un volumen para los datos
 VOLUME ["/var/lib/mysql"]
