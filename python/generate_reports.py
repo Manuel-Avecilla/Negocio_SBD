@@ -427,7 +427,7 @@ def main():
     Orquesta la ejecución de los análisis en las tres bases de datos
     y la persistencia en formato JSON dentro de una carpeta timestamped.
     """
-    # 1. Definición de la carpeta de destino: json_info/Date_YYYY_MM_DD_Hour_HH-MM-SS
+    # 1. Definición de la carpeta de destino: json_reports/Date_YYYY_MM_DD_Hour_HH-MM-SS
     ahora = datetime.datetime.now()
     nombre_carpeta = ahora.strftime("Date_%Y_%m_%d_Hour_%H-%M-%S")
     directorio_salida = BASE_DIR / "json_reports" / nombre_carpeta
