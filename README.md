@@ -1,122 +1,93 @@
-# Negocio_SBD
+# Negocio_SBD · SmartRuta & Movilidad Sostenible
 
-Proyecto de base de datos relacional para **SmartRuta & Movilidad Sostenible** desplegado en contenedores Docker (MySQL, PostgreSQL y MariaDB) con configuración centralizada mediante `.env` y volúmenes persistentes independientes.
+Sistema integral de base de datos relacional y analítica de datos para **SmartRuta & Movilidad Sostenible**. La infraestructura se despliega en contenedores Docker independientes con tres motores de bases de datos (**MySQL 8**, **PostgreSQL 15** y **MariaDB**), configuración centralizada mediante variables de entorno (`.env`), volúmenes persistentes y un pipeline en Python para la inicialización del esquema, poblado de datos sintéticos mediante `Faker` y generación de informes analíticos en formato JSON.
 
 ---
 
-## 1. Configuración Previa
+## 1. Despliegue de Base de Datos con Docker
+
+### 1.1. Configuración Inicial del Entorno
+
+Accede al directorio de Docker y genera el archivo de configuración a partir de la plantilla:
 
 ```bash
 cd Docker/
-```
-
-### Copiar la plantilla de variables de entorno
-```bash
 cp .env.template .env
 ```
 
-### Crear los volúmenes persistentes en Docker
-```bash
-docker volume create mysql_data
-docker volume create postgres_data
-docker volume create mariadb_data
-```
+### 1.2. Despliegue Unificado con Docker Compose
 
----
-
-## 1. MySQL (`contenedor-smartruta-mysql`)
-
-### Construir la imagen
-```bash
-docker build -t smartruta-mysql ./mysql
-```
-
-### Ejecutar el contenedor
-```bash
-docker run -d \
-  -p 3306:3306 \
-  --name contenedor-smartruta-mysql \
-  --env-file .env \
-  -v mysql_data:/var/lib/mysql \
-  smartruta-mysql
-```
-
----
-
-## 2. PostgreSQL (`contenedor-smartruta-postgres`)
-
-### Construir la imagen
-```bash
-docker build -t smartruta-postgres ./postgres
-```
-
-### Ejecutar el contenedor
-```bash
-docker run -d \
-  -p 5432:5432 \
-  --name contenedor-smartruta-postgres \
-  --env-file .env \
-  -v postgres_data:/var/lib/postgresql/data \
-  smartruta-postgres
-```
-
----
-
-## 3. MariaDB (`contenedor-smartruta-mariadb`)
-
-### Construir la imagen
-```bash
-docker build -t smartruta-mariadb ./mariadb
-```
-
-### Ejecutar el contenedor
-```bash
-docker run -d \
-  -p 3307:3306 \
-  --name contenedor-smartruta-mariadb \
-  --env-file .env \
-  -v mariadb_data:/var/lib/mysql \
-  smartruta-mariadb
-```
-
----
-
-Docker Compose
+Para compilar las imágenes y levantar simultáneamente los tres motores de bases de datos en segundo plano:
 
 ```bash
 docker compose up -d --build
 ```
 
+**Comandos de gestión:**
+
 ```bash
+# Detener los contenedores conservando los datos persistentes
 docker compose down
+
+# Detener los contenedores y eliminar volúmenes persistentes
+docker compose down -v
 ```
 
-Eliminar volúmenes persistentes (si es necesario)
+> [!TIP]
+> Para construir y levantar cada base de datos de manera independiente utilizando su propio `Dockerfile`, consulta las guías específicas en la carpeta [`docs/`](docs/).
+
+---
+
+## 2. Configuración del Entorno Python
+
+Para preparar el entorno de ejecución de los scripts de inicialización, poblado y analítica:
 
 ```bash
-docker compose down -v
+cd ../python
+
+# Crear el entorno virtual
+python3 -m venv venv
+
+# Activar el entorno virtual
+source venv/bin/activate
+
+# Actualizar el gestor de paquetes e instalar dependencias
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
 ---
 
-Python
+## 3. Pipeline de Datos y Reportes
+
+### Inicialización y Poblado de Datos
 
 ```bash
-cd python
+# Crear esquema en los tres motores
+python init_db.py
+
+# Poblar con datos de prueba sintéticos
+python seed.py
 ```
 
-```bash
-python3 -m venv venv
-```
+### Generación de Informes Analíticos JSON
 
 ```bash
-source venv/bin/activate
+# Ejecutar análisis en MySQL, PostgreSQL y MariaDB
+python generate_reports.py
 ```
 
-```bash
-python -m pip install --upgrade pip
-```
+Los informes resultantes se guardan de forma versionada en la raíz del proyecto dentro de `json_reports/Date_YYYY_MM_DD_Hour_HH-MM-SS/`:
+* `mysql.json`: Indicadores globales de sostenibilidad y distribución modal.
+* `postgress.json`: Red de carpooling, dinámicas de usuarios y telemetría GPS.
+* `mariadb.json`: Tendencias temporales, condiciones meteorológicas e incidencias viales.
 
-```bash
-pip install -r requirements.txt
-```
+---
+
+## 4. Documentación Detallada por Motor
+
+En la carpeta [`docs/`](docs/) se encuentra la guía específica de cada base de datos junto a la explicación detallada de su análisis e informe:
+
+* [MySQL - Despliegue y Análisis](docs/mysql.md)
+* [PostgreSQL - Despliegue y Análisis](docs/postgres.md)
+* [MariaDB - Despliegue y Análisis](docs/mariadb.md)

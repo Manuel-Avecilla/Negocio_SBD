@@ -67,3 +67,4 @@ Thumbs.db
 *.log
 .env
 .env.local
+json_reports/
