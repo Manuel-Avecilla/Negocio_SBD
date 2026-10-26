@@ -91,3 +91,4 @@ En la carpeta [`docs/`](docs/) se encuentra la guía específica de cada base de
 * [MySQL - Despliegue y Análisis](docs/mysql.md)
 * [PostgreSQL - Despliegue y Análisis](docs/postgres.md)
 * [MariaDB - Despliegue y Análisis](docs/mariadb.md)
+* [Redis - Despliegue](docs/redis.md)

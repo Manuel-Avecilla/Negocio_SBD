@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+
   mysql:
     build: ./mysql
     container_name: contenedor-smartruta-mysql
@@ -38,8 +39,17 @@ services:
       MARIADB_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - mariadb_data:/var/lib/mysql
+  
+  redis:
+    build: ./redis
+    container_name: contenedor-smartruta-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
 volumes:
   mysql_data:
   postgres_data:
   mariadb_data:
+  redis_data:
