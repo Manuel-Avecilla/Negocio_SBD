@@ -1,0 +1,1 @@
+# 21 - Obtén datos de alguna de las bases de datos de la tarea anterior  mediante una sql e incluyelos en Redis(1 punto)

@@ -1,0 +1,1 @@
+# 22 - Obtén datos de la base de datos de Redis e incluyelos en de alguna de las bases de datos de la tarea anterior (1 puntos)

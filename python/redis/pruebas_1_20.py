@@ -1,7 +1,4 @@
-import os
-import sys
 import json
-from pathlib import Path
 import redis
 from redis.commands.search.field import TextField, NumericField, TagField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
@@ -12,6 +9,8 @@ import redis.commands.search.reducers as reducers
 
 conexionRedis = redis.ConnectionPool(host='localhost', port=6379, db=0, decode_responses=True)
 baseDatosRedis = redis.Redis(connection_pool=conexionRedis)
+
+
 
 
 # 1- Crear registros clave-valor(0.25 puntos)
@@ -276,7 +275,9 @@ def create_json_structure(key: str = "smartruta:rutas_json"):
 def filter_json_attributes(key: str = "smartruta:rutas_json"):
     try:
         datos = baseDatosRedis.json().get(key)
+        
     except Exception:
+        
         raw = baseDatosRedis.get(key)
         datos = json.loads(raw) if raw else []
 
@@ -310,7 +311,9 @@ def filter_json_attributes(key: str = "smartruta:rutas_json"):
 
 # 16 - Crear una lista en Redis (0.25 puntos)
 def create_redis_list(list_key: str = "smartruta:viajes_lista"):
+    
     baseDatosRedis.delete(list_key)
+    
     elementos = [
         "viaje:001:completado:Madrid",
         "viaje:002:en_curso:Madrid",
@@ -318,22 +321,33 @@ def create_redis_list(list_key: str = "smartruta:viajes_lista"):
         "viaje:004:completado:Valencia",
         "viaje:005:en_curso:Sevilla"
     ]
+    
     baseDatosRedis.rpush(list_key, *elementos)
+    
     total = baseDatosRedis.llen(list_key)
+    
     contenido = baseDatosRedis.lrange(list_key, 0, -1)
+    
     print(f"Lista '{list_key}' creada con {total} elementos:")
+    
     for idx, elem in enumerate(contenido):
         print(f"  [{idx}] {elem}")
+        
     return contenido
 
 
 # 17 - Obtener elementos de una lista con un filtro en concreto(0.5 puntos)
 def filter_redis_list(list_key: str = "smartruta:viajes_lista", filter_term: str = "completado"):
+    
     elementos = baseDatosRedis.lrange(list_key, 0, -1)
+    
     filtrados = [elem for elem in elementos if filter_term in elem]
+    
     print(f"Elementos de la lista '{list_key}' que contienen '{filter_term}':")
+    
     for elem in filtrados:
         print(f"  - {elem}")
+        
     return filtrados
 
 
@@ -363,40 +377,64 @@ def create_indexed_data():
         pass
 
     try:
+        
         baseDatosRedis.ft(INDEX_NAME).create_index(schema, definition=definition)
+        
         print(f"Índice '{INDEX_NAME}' creado en RediSearch con esquema: modelo (TEXT), autonomia_km (NUMERIC), categoria (TAG).")
+        
     except Exception as e:
         print(f"Aviso RediSearch: {e} (se mantendrán también índices secundarios en Hashes/Sets).")
 
     for doc in docs:
         doc_id = doc["doc_id"]
         campos = {k: str(v) for k, v in doc.items() if k != "doc_id"}
+        
         baseDatosRedis.hset(doc_id, mapping=campos)
+        
         baseDatosRedis.sadd(f"idx_manual:categoria:{campos['categoria']}", doc_id)
+        
         print(f"  Documento insertado: {doc_id} => {campos}")
+        
     return docs
 
 
 # 19 - Realiza una búsqueda con índices en base a un campo(0.5 puntos)
 def search_indexed_data(category: str = "electrico"):
+    
     print(f"\n--- Búsqueda con índices para campo 'categoria' = '{category}' ---")
+    
     try:
         q = Query(f"@categoria:{{{category}}}")
+        
         res = baseDatosRedis.ft(INDEX_NAME).search(q)
+        
         print(f"Resultados encontrados con RediSearch ({res.total}):")
+        
         resultados = []
+        
         for doc in res.docs:
+            
             print(f"  ID: {doc.id} | Modelo: {doc.modelo} | Autonomía: {doc.autonomia_km} km | Categoría: {doc.categoria}")
+            
             resultados.append(doc)
+            
         return resultados
+    
     except Exception as e:
         print(f"Búsqueda mediante índices secundarios (RediSearch no disponible: {e}):")
+        
         doc_ids = baseDatosRedis.smembers(f"idx_manual:categoria:{category}")
+        
         resultados = []
+        
         for doc_id in doc_ids:
+            
             datos = baseDatosRedis.hgetall(doc_id)
+            
             resultados.append((doc_id, datos))
+            
             print(f"  ID: {doc_id} => {datos}")
+        
         return resultados
 
 
@@ -408,31 +446,56 @@ def group_by_indexed_data():
             AggregateRequest("*")
             .group_by("@categoria", reducers.count().alias("cantidad"), reducers.avg("@autonomia_km").alias("promedio_autonomia"))
         )
+        
         res = baseDatosRedis.ft(INDEX_NAME).aggregate(req)
+        
         print("Resultados de agregación y Group By con RediSearch:")
+        
         for row in res.rows:
+            
             fila_dict = {row[i]: row[i + 1] for i in range(0, len(row), 2)}
+            
             print(f"  Categoría: {fila_dict.get('categoria')} | Cantidad: {fila_dict.get('cantidad')} | Autonomía media: {float(fila_dict.get('promedio_autonomia', 0)):.2f} km")
+            
         return res
+    
     except Exception as e:
+        
         print(f"Group By mediante índices secundarios (RediSearch no disponible: {e}):")
+        
         categorias = ["electrico", "hibrido"]
+        
         res_dict = {}
+        
         for cat in categorias:
+            
             doc_ids = baseDatosRedis.smembers(f"idx_manual:categoria:{cat}")
+            
             cant = len(doc_ids)
+            
             autonomias = []
+            
             for did in doc_ids:
+                
                 h = baseDatosRedis.hgetall(did)
+                
                 if "autonomia_km" in h:
+                    
                     autonomias.append(float(h["autonomia_km"]))
+            
             avg_aut = sum(autonomias) / cant if cant > 0 else 0
+            
             res_dict[cat] = {"cantidad": cant, "promedio_autonomia": avg_aut}
+            
             print(f"  Categoría: {cat} | Cantidad: {cant} | Autonomía media: {avg_aut:.2f} km")
+        
         return res_dict
 
 
 if __name__ == "__main__":
+    
+    # Vaciar la base de datos antes de iniciar las pruebas
+    baseDatosRedis.flushdb()
     
     print("=" * 60)
     print("EJECUCIÓN DE PRUEBAS REDIS 1 - 20 (SMARTRUTA & SBD)")
@@ -521,3 +584,10 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("FIN DE LAS PRUEBAS 1 - 20")
     print("=" * 60)
+    
+    # Vaciar la base de datos después de finalizar las pruebas
+    baseDatosRedis.flushdb()
+    
+    # Cerrar la conexión a Redis
+    baseDatosRedis.close()
+    
