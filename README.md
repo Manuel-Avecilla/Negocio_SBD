@@ -210,7 +210,7 @@ python redis/pruebas_1_20.py
 ```
 
 > [!WARNING]
-> Estas pruebas **vacían la base de datos de Redis** antes y después de la ejecución. No las lances si tienes datos que quieras conservar.
+> Estas pruebas antes de la ejecución **vacían la base de datos de Redis**. No las lances si tienes datos que quieras conservar.
 
 ### Script 21
 
@@ -222,6 +222,11 @@ python redis/script_21.py
 
 ```bash
 python redis/script_22.py
+```
+
+### Vaciar la base de datos de Redis
+```bash
+python redis/flushdb.py
 ```
 
 ---
