@@ -18,7 +18,7 @@ Sobre ella se ejecuta un pipeline en Python que inicializa los esquemas, los pue
 6. [Visor de bases de datos (DbGate)](#6-visor-de-bases-de-datos-dbgate)
 7. [Scripts de Redis](#7-scripts-de-redis)
 8. [Documentación por motor](#8-documentación-por-motor)
-9. [Solución de problemas](#9-solución-de-problemas)
+9. [Diagrama ER](#9-diagrama-er)
 
 ---
 
@@ -257,3 +257,8 @@ En la carpeta [`docs/`](docs/) está la guía de cada base de datos, junto con l
 - [PostgreSQL: despliegue y análisis](docs/postgres.md)
 - [MariaDB: despliegue y análisis](docs/mariadb.md)
 - [Redis: despliegue](docs/redis.md)
+
+---
+
+## 9. Diagrama ER
+![](/docs/Diagrama%20ER.png)
