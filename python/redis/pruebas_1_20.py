@@ -586,7 +586,7 @@ if __name__ == "__main__":
     print("=" * 60)
     
     # Vaciar la base de datos después de finalizar las pruebas
-    baseDatosRedis.flushdb()
+    # baseDatosRedis.flushdb()
     
     # Cerrar la conexión a Redis
     baseDatosRedis.close()
