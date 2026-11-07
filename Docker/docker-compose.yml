@@ -1,7 +1,6 @@
-version: '3.8'
-
 services:
-
+# -------------- Base de datos --------------
+# ________MySQL________
   mysql:
     build: ./mysql
     container_name: contenedor-smartruta-mysql
@@ -14,7 +13,10 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - app-net
 
+# ________PostgreSQL________
   postgres:
     build: ./postgres
     container_name: contenedor-smartruta-postgres
@@ -26,7 +28,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
 
+# ________MariaDB________
   mariadb:
     build: ./mariadb
     container_name: contenedor-smartruta-mariadb
@@ -39,7 +44,10 @@ services:
       MARIADB_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - mariadb_data:/var/lib/mysql
-  
+    networks:
+      - app-net
+
+# ______Redis________
   redis:
     build: ./redis
     container_name: contenedor-smartruta-redis
@@ -47,9 +55,62 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - app-net
+
+# ------ DBGate (Interfaz de administración de bases de datos) -----
+  dbgate:
+    image: dbgate/dbgate:latest
+    container_name: visor-bases-de-datos
+    restart: always
+    ports:
+      - "8080:3000"
+    volumes:
+      - dbgate_data:/root/.dbgate
+    environment:
+      CONNECTIONS: mysql,postgres,mariadb,redis
+
+      LABEL_mysql: MySQL
+      ENGINE_mysql: mysql@dbgate-plugin-mysql
+      SERVER_mysql: mysql
+      PORT_mysql: 3306
+      USER_mysql: root
+      PASSWORD_mysql: ${MYSQL_ROOT_PASSWORD}
+
+      LABEL_postgres: PostgreSQL
+      ENGINE_postgres: postgres@dbgate-plugin-postgres
+      SERVER_postgres: postgres
+      PORT_postgres: 5432
+      USER_postgres: ${POSTGRES_USER}
+      PASSWORD_postgres: ${POSTGRES_PASSWORD}
+
+      LABEL_mariadb: MariaDB
+      ENGINE_mariadb: mysql@dbgate-plugin-mysql
+      SERVER_mariadb: mariadb
+      PORT_mariadb: 3306
+      USER_mariadb: root
+      PASSWORD_mariadb: ${MYSQL_ROOT_PASSWORD}
+
+      LABEL_redis: Redis
+      ENGINE_redis: redis@dbgate-plugin-redis
+      SERVER_redis: redis
+      PORT_redis: 6379
+    depends_on:
+      - mysql
+      - postgres
+      - mariadb
+      - redis
+    networks:
+      - app-net
+
+
+networks:
+  app-net:
+    driver: bridge
 
 volumes:
   mysql_data:
   postgres_data:
   mariadb_data:
   redis_data:
+  dbgate_data:
