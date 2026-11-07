@@ -212,21 +212,39 @@ python redis/pruebas_1_20.py
 > [!WARNING]
 > Estas pruebas antes de la ejecución **vacían la base de datos de Redis**. No las lances si tienes datos que quieras conservar.
 
-### Script 21
+
+### Script 21: MySQL → Redis
+
+Ejecuta en MySQL una consulta SQL con `JOIN` entre `USUARIOS` y `DIRECCIONES` y guarda el resultado en Redis (`db0`):
+
+| Clave                           | Contenido                                                    |
+|---------------------------------|--------------------------------------------------------------|
+| `smartruta:mysql:usuario:<id>`  | Un hash por usuario                                          |
+| `smartruta:mysql:usuarios:ids`  | Conjunto con los identificadores importados                  |
+| `smartruta:mysql:usuarios_json` | Todos los usuarios en un único JSON (RedisJSON si está disponible) |
+| `smartruta:mysql:importacion`   | Metadatos de la importación (consulta, total, fecha)         |
+
+Es idempotente: borra la importación anterior antes de escribir. Requiere haber ejecutado antes `init_db.py` y `seed.py`.
 
 ```bash
 python redis/script_21.py
 ```
 
-### Script 22
+### Script 22: Redis → PostgreSQL
+
+Lee de Redis los usuarios que dejó el script 21 (los hashes o, si no existen, el JSON completo) y los inserta o actualiza en la tabla `USUARIOS_DESDE_REDIS` de PostgreSQL, que crea si no existe.
 
 ```bash
 python redis/script_22.py
 ```
 
-### Vaciar la base de datos de Redis
+> [!IMPORTANT]
+> Ejecuta el script 21 antes que el 22. Si lanzas las pruebas 1-20 entre ambos, los datos del script 21 se borran de Redis y el 22 no encontrará nada que importar.
+
+Para comprobar en qué base de datos están las claves tras una ejecución:
+
 ```bash
-python redis/flushdb.py
+docker exec -it contenedor-smartruta-redis redis-cli INFO keyspace
 ```
 
 ---
