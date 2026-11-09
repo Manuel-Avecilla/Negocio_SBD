@@ -38,10 +38,10 @@ services:
     ports:
       - "3307:3306"
     environment:
-      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MARIADB_DATABASE: ${MYSQL_DATABASE}
-      MARIADB_USER: ${MYSQL_USER}
-      MARIADB_PASSWORD: ${MYSQL_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:
@@ -68,13 +68,14 @@ services:
     volumes:
       - dbgate_data:/root/.dbgate
     environment:
-      CONNECTIONS: mysql,postgres,mariadb,redis
+      CONNECTIONS: mysql,postgres,mariadb,redis,rds
 
+      # Local ----------------------------------
       LABEL_mysql: MySQL
       ENGINE_mysql: mysql@dbgate-plugin-mysql
       SERVER_mysql: mysql
       PORT_mysql: 3306
-      USER_mysql: root
+      USER_mysql: ${MYSQL_USER}
       PASSWORD_mysql: ${MYSQL_ROOT_PASSWORD}
 
       LABEL_postgres: PostgreSQL
@@ -88,13 +89,23 @@ services:
       ENGINE_mariadb: mysql@dbgate-plugin-mysql
       SERVER_mariadb: mariadb
       PORT_mariadb: 3306
-      USER_mariadb: root
-      PASSWORD_mariadb: ${MYSQL_ROOT_PASSWORD}
+      USER_mariadb: ${MARIADB_USER}
+      PASSWORD_mariadb: ${MARIADB_ROOT_PASSWORD}
 
       LABEL_redis: Redis
       ENGINE_redis: redis@dbgate-plugin-redis
       SERVER_redis: redis
       PORT_redis: 6379
+
+      # AWS RDS ----------------------------------
+      LABEL_rds: AWS RDS
+      ENGINE_rds: mysql@dbgate-plugin-mysql   
+      SERVER_rds: ${AWS_RDS_DB_ENDPOINT}
+      PORT_rds: 3306                         
+      USER_rds: ${AWS_RDS_DB_USER}
+      PASSWORD_rds: ${AWS_RDS_DB_PASSWORD}
+      DATABASE_rds: ${AWS_RDS_DB_NAME}
+
     depends_on:
       - mysql
       - postgres

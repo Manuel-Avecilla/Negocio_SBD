@@ -1,6 +1,9 @@
 Faker>=19.0.0
 psycopg2-binary>=2.9.0
 pymysql>=1.1.0
-python-dotenv>=1.0.0
+python-dotenv>=1.0.1
 
 redis~=7.0.1
+
+boto3~=1.43.126
+mysql-connector-python
