@@ -58,6 +58,20 @@ services:
     networks:
       - app-net
 
+  # ------ Init: descarga el bundle de CA de RDS (se ejecuta y termina) -----
+  rds-cert:
+    image: curlimages/curl:latest
+    container_name: rds-cert-init
+    user: root
+    restart: "no"
+    entrypoint: ["sh", "-c"]
+    command:
+      - curl -fsSL -o /certs/rds-ca.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+    volumes:
+      - rds_certs:/certs
+    networks:
+      - app-net
+
 # ------ DBGate (Interfaz de administración de bases de datos) -----
   dbgate:
     image: dbgate/dbgate:latest
@@ -67,8 +81,12 @@ services:
       - "8080:3000"
     volumes:
       - dbgate_data:/root/.dbgate
+      - rds_certs:/certs:ro
     environment:
       CONNECTIONS: mysql,postgres,mariadb,redis,rds
+      USE_SSL_rds: "1"
+      SSL_CA_FILE_rds: /certs/rds-ca.pem
+      SSL_REJECT_UNAUTHORIZED_rds: "1"
 
       # Local ----------------------------------
       LABEL_mysql: MySQL
@@ -107,10 +125,17 @@ services:
       DATABASE_rds: ${AWS_RDS_DB_NAME}
 
     depends_on:
-      - mysql
-      - postgres
-      - mariadb
-      - redis
+      mysql:
+        condition: service_started
+      postgres:
+        condition: service_started
+      mariadb:
+        condition: service_started
+      redis:
+        condition: service_started
+      rds-cert:
+        condition: service_completed_successfully
+    
     networks:
       - app-net
 
@@ -125,3 +150,4 @@ volumes:
   mariadb_data:
   redis_data:
   dbgate_data:
+  rds_certs:
