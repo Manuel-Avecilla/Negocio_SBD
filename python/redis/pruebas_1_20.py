@@ -11,8 +11,6 @@ conexionRedis = redis.ConnectionPool(host='localhost', port=6379, db=0, decode_r
 baseDatosRedis = redis.Redis(connection_pool=conexionRedis)
 
 
-
-
 # 1- Crear registros clave-valor(0.25 puntos)
 def add_data():
     datos = {

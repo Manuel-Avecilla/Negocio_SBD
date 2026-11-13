@@ -34,49 +34,45 @@ import pymysql
 import pymysql.cursors
 import psycopg2
 import psycopg2.extras
+from pymysql.constants import CLIENT
 from dotenv import load_dotenv
 
 
-# --- LOCALIZACIÓN Y CARGA DE VARIABLES DE ENTORNO ---
+# Cargar .env desde la carpeta Docker/
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Soporte para directorio Docker tanto en mayúscula como minúscula
 env_path = BASE_DIR / "Docker" / ".env"
-if not env_path.exists():
-    env_path = BASE_DIR / "docker" / ".env"
-
 load_dotenv(dotenv_path=env_path)
 
-# Variables generales / compartidas con valores por defecto
-SHARED_PASS = os.getenv("SHARED_PASSWORD", "smartruta_pass_123")
-DB_NAME_DEFAULT = os.getenv("MYSQL_DATABASE", "smartruta_db")
-DB_USER_DEFAULT = os.getenv("MYSQL_USER", "smartruta_user")
+# Variables generales
+SHARED_DB_USER = os.getenv("SHARED_DB_USER")
+SHARED_DB_PASSWORD = os.getenv("SHARED_DB_PASSWORD")
 
-# Configuración de conexiones
 CONFIG_MYSQL = {
-    "host": os.getenv("MYSQL_HOST", "localhost"),
-    "port": int(os.getenv("MYSQL_PORT", 3306)),
-    "user": os.getenv("MYSQL_USER", DB_USER_DEFAULT),
-    "password": os.getenv("MYSQL_PASSWORD", SHARED_PASS),
-    "database": os.getenv("MYSQL_DATABASE", DB_NAME_DEFAULT),
-    "cursorclass": pymysql.cursors.DictCursor
+    "host": "localhost",
+    "port": 3306,
+    "user": SHARED_DB_USER,
+    "password": SHARED_DB_PASSWORD,
+    "database": os.getenv("MYSQL_DB_NAME"),
+    "cursorclass": pymysql.cursors.DictCursor,
+    "client_flag": CLIENT.MULTI_STATEMENTS  # Permite ejecutar el bloque SQL completo
 }
 
 CONFIG_POSTGRES = {
-    "host": os.getenv("POSTGRES_HOST", "localhost"),
-    "port": int(os.getenv("POSTGRES_PORT", 5432)),
-    "user": os.getenv("POSTGRES_USER", DB_USER_DEFAULT),
-    "password": os.getenv("POSTGRES_PASSWORD", SHARED_PASS),
-    "dbname": os.getenv("POSTGRES_DB", DB_NAME_DEFAULT)
+    "host": "localhost",
+    "port": 5432,
+    "user": SHARED_DB_USER,
+    "password": SHARED_DB_PASSWORD,
+    "dbname": os.getenv("POSTGRES_DB_NAME")
 }
 
 CONFIG_MARIADB = {
-    "host": os.getenv("MARIADB_HOST", "localhost"),
-    "port": int(os.getenv("MARIADB_PORT", 3307)),
-    "user": os.getenv("MARIADB_USER", os.getenv("MYSQL_USER", DB_USER_DEFAULT)),
-    "password": os.getenv("MARIADB_PASSWORD", os.getenv("MYSQL_PASSWORD", SHARED_PASS)),
-    "database": os.getenv("MARIADB_DATABASE", os.getenv("MYSQL_DATABASE", DB_NAME_DEFAULT)),
-    "cursorclass": pymysql.cursors.DictCursor
+    "host": "localhost",
+    "port": 3307,
+    "user": SHARED_DB_USER,
+    "password": SHARED_DB_PASSWORD,
+    "database": os.getenv("MARIADB_DB_NAME"),
+    "cursorclass": pymysql.cursors.DictCursor,
+    "client_flag": CLIENT.MULTI_STATEMENTS  # Permite ejecutar el bloque SQL completo
 }
 
 

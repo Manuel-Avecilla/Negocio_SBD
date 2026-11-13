@@ -23,19 +23,14 @@ from dotenv import load_dotenv
 from redis.exceptions import ResponseError
 
 
-# --- LOCALIZACIÓN DEL PROYECTO Y CARGA DE VARIABLES DE ENTORNO ---
-# Este script está en python/redis/, por lo que la raíz queda tres niveles arriba.
+# Cargar .env desde la carpeta Docker/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
 env_path = BASE_DIR / "Docker" / ".env"
-if not env_path.exists():
-    env_path = BASE_DIR / "docker" / ".env"
-
 load_dotenv(dotenv_path=env_path)
 
-SHARED_PASS = os.getenv("SHARED_PASSWORD", "smartruta_pass_123")
-DB_NAME_DEFAULT = os.getenv("MYSQL_DATABASE", "smartruta_db")
-DB_USER_DEFAULT = os.getenv("MYSQL_USER", "smartruta_user")
+# Variables generales
+SHARED_DB_USER = os.getenv("SHARED_DB_USER")
+SHARED_DB_PASSWORD = os.getenv("SHARED_DB_PASSWORD")
 
 
 # --- CONFIGURACIÓN DE REDIS (ORIGEN DE LOS DATOS) ---
@@ -50,11 +45,11 @@ baseDatosRedis = redis.Redis(connection_pool=conexionRedis)
 
 # --- CONFIGURACIÓN DE PostgreSQL (DESTINO DE LOS DATOS) ---
 CONFIG_POSTGRES = {
-    "host": os.getenv("POSTGRES_HOST", "localhost"),
-    "port": int(os.getenv("POSTGRES_PORT", 5432)),
-    "user": os.getenv("POSTGRES_USER", DB_USER_DEFAULT),
-    "password": os.getenv("POSTGRES_PASSWORD", SHARED_PASS),
-    "dbname": os.getenv("POSTGRES_DB", DB_NAME_DEFAULT)
+    "host": "localhost",
+    "port": 5432,
+    "user": SHARED_DB_USER,
+    "password": SHARED_DB_PASSWORD,
+    "dbname": os.getenv("POSTGRES_DB_NAME")
 }
 
 

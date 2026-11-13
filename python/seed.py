@@ -23,48 +23,47 @@ import datetime
 import pymysql
 import psycopg2
 from faker import Faker
+from pymysql.constants import CLIENT
 
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Obtener la ruta absoluta de la carpeta raíz del proyecto y localizar docker/.env
-BASE_DIR = Path(__file__).resolve().parent.parent
-env_path = BASE_DIR / "docker" / ".env"
-
-# Cargar explícitamente el archivo .env desde la carpeta docker
-load_dotenv(dotenv_path=env_path)
-
 # Inicializar Faker en español
 fake = Faker('es_ES')
 
-# Variables generales / compartidas
-SHARED_PASS = os.getenv("SHARED_PASSWORD", "smartruta_pass_123")
-DB_NAME_DEFAULT = os.getenv("MYSQL_DATABASE", "smartruta_db")
-DB_USER_DEFAULT = os.getenv("MYSQL_USER", "smartruta_user")
+# Cargar .env desde la carpeta Docker/
+BASE_DIR = Path(__file__).resolve().parent.parent
+env_path = BASE_DIR / "Docker" / ".env"
+load_dotenv(dotenv_path=env_path)
 
-# Configuración individual por motor
+# Variables generales
+SHARED_DB_USER = os.getenv("SHARED_DB_USER")
+SHARED_DB_PASSWORD = os.getenv("SHARED_DB_PASSWORD")
+
 CONFIG_MYSQL = {
     "host": "localhost",
     "port": 3306,
-    "user": os.getenv("MYSQL_USER", DB_USER_DEFAULT),
-    "password": os.getenv("MYSQL_PASSWORD", SHARED_PASS),
-    "database": os.getenv("MYSQL_DATABASE", DB_NAME_DEFAULT)
+    "user": SHARED_DB_USER,
+    "password": SHARED_DB_PASSWORD,
+    "database": os.getenv("MYSQL_DB_NAME"),
+    "client_flag": CLIENT.MULTI_STATEMENTS  # Permite ejecutar el bloque SQL completo
 }
 
 CONFIG_POSTGRES = {
     "host": "localhost",
     "port": 5432,
-    "user": os.getenv("POSTGRES_USER", DB_USER_DEFAULT),
-    "password": os.getenv("POSTGRES_PASSWORD", SHARED_PASS),
-    "dbname": os.getenv("POSTGRES_DB", DB_NAME_DEFAULT)
+    "user": SHARED_DB_USER,
+    "password": SHARED_DB_PASSWORD,
+    "dbname": os.getenv("POSTGRES_DB_NAME")
 }
 
 CONFIG_MARIADB = {
     "host": "localhost",
     "port": 3307,
-    "user": os.getenv("MARIADB_USER", os.getenv("MYSQL_USER", DB_USER_DEFAULT)),
-    "password": os.getenv("MARIADB_PASSWORD", os.getenv("MYSQL_PASSWORD", SHARED_PASS)),
-    "database": os.getenv("MARIADB_DATABASE", os.getenv("MYSQL_DATABASE", DB_NAME_DEFAULT))
+    "user": SHARED_DB_USER,
+    "password": SHARED_DB_PASSWORD,
+    "database": os.getenv("MARIADB_DB_NAME"),
+    "client_flag": CLIENT.MULTI_STATEMENTS  # Permite ejecutar el bloque SQL completo
 }
 
 def obtener_conexiones():

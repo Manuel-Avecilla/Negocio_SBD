@@ -1,8 +1,14 @@
 import boto3
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parents[3]
+DOCKER_DIR = BASE_DIR / "Docker"
+ENV_PATH = DOCKER_DIR / ".env"
+
+load_dotenv(ENV_PATH)
+
 
 session = boto3.session.Session(
     aws_access_key_id=os.getenv("AWS_ACCESS_KEY"),
@@ -11,6 +17,6 @@ session = boto3.session.Session(
     region_name=os.getenv("AWS_REGION"))
 
 
-client = session.client('conexion')
+client = session.client('dynamodb')
 
 print(client.list_tables())

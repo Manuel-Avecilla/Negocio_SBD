@@ -22,36 +22,30 @@ from pathlib import Path
 
 import pymysql
 import pymysql.cursors
+from pymysql.constants import CLIENT
 import redis
 from dotenv import load_dotenv
 from redis.exceptions import ResponseError
 
 
-# --- LOCALIZACIÓN DEL PROYECTO Y CARGA DE VARIABLES DE ENTORNO ---
-# Este script está en python/redis/, por lo que la raíz queda tres niveles arriba.
+# Cargar .env desde la carpeta Docker/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
 env_path = BASE_DIR / "Docker" / ".env"
-if not env_path.exists():
-    env_path = BASE_DIR / "docker" / ".env"
-
 load_dotenv(dotenv_path=env_path)
 
-SHARED_PASS = os.getenv("SHARED_PASSWORD", "smartruta_pass_123")
-DB_NAME_DEFAULT = os.getenv("MYSQL_DATABASE", "smartruta_db")
-DB_USER_DEFAULT = os.getenv("MYSQL_USER", "smartruta_user")
+# Variables generales
+SHARED_DB_USER = os.getenv("SHARED_DB_USER")
+SHARED_DB_PASSWORD = os.getenv("SHARED_DB_PASSWORD")
 
-
-# --- CONFIGURACIÓN DE MySQL (ORIGEN DE LOS DATOS) ---
 CONFIG_MYSQL = {
-    "host": os.getenv("MYSQL_HOST", "localhost"),
-    "port": int(os.getenv("MYSQL_PORT", 3306)),
-    "user": os.getenv("MYSQL_USER", DB_USER_DEFAULT),
-    "password": os.getenv("MYSQL_PASSWORD", SHARED_PASS),
-    "database": os.getenv("MYSQL_DATABASE", DB_NAME_DEFAULT),
-    "cursorclass": pymysql.cursors.DictCursor
+    "host": "localhost",
+    "port": 3306,
+    "user": SHARED_DB_USER,
+    "password": SHARED_DB_PASSWORD,
+    "database": os.getenv("MYSQL_DB_NAME"),
+    "cursorclass": pymysql.cursors.DictCursor,
+    "client_flag": CLIENT.MULTI_STATEMENTS  # Permite ejecutar el bloque SQL completo
 }
-
 
 # --- CONFIGURACIÓN DE REDIS (DESTINO DE LOS DATOS) ---
 conexionRedis = redis.ConnectionPool(
