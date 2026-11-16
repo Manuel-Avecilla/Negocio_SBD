@@ -17,6 +17,6 @@ session = boto3.session.Session(
     region_name=os.getenv("AWS_REGION"))
 
 
-client = session.client('dynamodb')
+client = session.client('rds')
 
-print(client.list_tables())
+print(client.describe_db_instances())
