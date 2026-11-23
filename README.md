@@ -7,7 +7,7 @@ El proyecto contempla dos entornos de ejecución:
 - **Entorno local:** MySQL, PostgreSQL, MariaDB y Redis desplegados con Docker Compose, más un visor web (**DbGate**) con las conexiones preconfiguradas.
 - **Entorno AWS:** una instancia **MariaDB en Amazon RDS** y tres tablas en **Amazon DynamoDB**, creadas y gestionadas desde Python con `boto3`, con scripts propios de inicialización, poblado y pruebas.
 
-Sobre ambos entornos se ejecuta un pipeline en Python que crea los esquemas, los puebla con datos sintéticos mediante `Faker` y genera informes analíticos en JSON. El entorno local incorpora además las prácticas de Redis, incluyendo los flujos SQL → Redis y Redis → SQL, y el entorno AWS incluye una suite de pruebas sobre DynamoDB.
+Sobre ambos entornos se ejecuta un pipeline en Python que crea los esquemas, los puebla con datos sintéticos mediante `Faker` y genera informes analíticos en JSON. El entorno local incorpora además las prácticas de Redis, incluyendo los flujos SQL → Redis y Redis → SQL, y el entorno AWS incluye una suite de pruebas sobre DynamoDB y un informe JSON unificado de RDS y DynamoDB.
 
 ---
 
@@ -22,10 +22,11 @@ Sobre ambos entornos se ejecuta un pipeline en Python que crea los esquemas, los
 7. [Pipeline local de datos y reportes](#7-pipeline-local-de-datos-y-reportes)
 8. [Pipeline en AWS RDS](#8-pipeline-en-aws-rds)
 9. [Pipeline en AWS DynamoDB](#9-pipeline-en-aws-dynamodb)
-10. [Visores de bases de datos](#10-visores-de-bases-de-datos)
-11. [Scripts de Redis](#11-scripts-de-redis)
-12. [Documentación por motor](#12-documentación-por-motor)
-13. [Diagrama ER](#13-diagrama-er)
+10. [Informe unificado AWS](#10-informe-unificado-aws)
+11. [Visores de bases de datos](#11-visores-de-bases-de-datos)
+12. [Scripts de Redis](#12-scripts-de-redis)
+13. [Documentación por motor](#13-documentación-por-motor)
+14. [Diagrama ER](#14-diagrama-er)
 
 ---
 
@@ -106,10 +107,10 @@ Negocio_SBD/
 │   │   ├── script_21.py           # MySQL → Redis
 │   │   └── script_22.py           # Redis → PostgreSQL
 │   └── aws/
+│       ├── generate_reports.py     # Informe JSON unificado (RDS + DynamoDB)
 │       ├── RDS/
 │       │   ├── init_RDS.py         # Crea/arranca RDS, la base de datos y las tablas
 │       │   ├── seed.py             # Poblado de MariaDB en AWS RDS
-│       │   ├── generate_reports.py # Informes JSON de AWS RDS
 │       │   └── conexion.py         # Script auxiliar de conexión con AWS RDS
 │       └── DynamoDB/
 │           ├── init_DynamoDB.py    # Crea las 3 tablas, índices y TTL; actualiza el visor
@@ -280,7 +281,7 @@ Dependencias principales declaradas en `python/requirements.txt`:
 - `boto3`
 - `mysql-connector-python`
 
-Los comandos de las siguientes secciones deben ejecutarse con el entorno virtual activado.
+Todos los comandos `python ...` de este README se ejecutan desde `python/` con el entorno virtual activado, salvo que se indique lo contrario.
 
 ---
 
@@ -351,7 +352,7 @@ Cada informe incluye un bloque `metadatos` con el motor, la fecha de generación
 
 ## 8. Pipeline en AWS RDS
 
-El flujo de AWS RDS es independiente del pipeline local y se ejecuta con los scripts de `python/aws/RDS/`. Todos ellos leen la configuración desde `Docker/.env` y escriben los informes en la misma carpeta raíz `json_reports/`.
+El flujo de AWS RDS se ejecuta desde el directorio `python/` con los scripts de `aws/RDS/`. La inicialización y el poblado usan ese directorio, mientras que el informe JSON unificado se genera desde `aws/generate_reports.py` (sección 10). Todas las configuraciones se leen desde `Docker/.env` y los informes se escriben en `json_reports/` en la raíz del proyecto.
 
 ### 8.1. Preparación
 
@@ -370,10 +371,10 @@ Antes de ejecutar los scripts, comprueba que `Docker/.env` contiene:
 
 ### 8.2. Inicialización de la instancia y de las tablas
 
-Desde la raíz del proyecto, con el entorno virtual activado:
+Desde el directorio `python/`, con el entorno virtual activado:
 
 ```bash
-python python/aws/RDS/init_RDS.py
+python aws/RDS/init_RDS.py
 ```
 
 El script realiza las siguientes operaciones:
@@ -396,7 +397,7 @@ El script realiza las siguientes operaciones:
 ### 8.3. Poblado de MariaDB en RDS
 
 ```bash
-python python/aws/RDS/seed.py
+python aws/RDS/seed.py
 ```
 
 Inserta en MariaDB RDS los mismos volúmenes de datos sintéticos que el poblado local, pero utilizando una única conexión y un único `commit` final. Debe ejecutarse después de `init_RDS.py`.
@@ -404,38 +405,17 @@ Inserta en MariaDB RDS los mismos volúmenes de datos sintéticos que el poblado
 > [!WARNING]
 > Al igual que el seed local, este script no limpia las tablas. Repetirlo sobre una base ya poblada puede provocar duplicados o errores de integridad referencial.
 
-### 8.4. Informes analíticos de AWS RDS
-
-```bash
-python python/aws/RDS/generate_reports.py
-```
-
-Genera tres informes independientes en:
-
-```text
-json_reports/Date_YYYY_MM_DD_Hour_HH-MM-SS/
-```
-
-| Archivo                            | Contenido                                                        |
-|------------------------------------|------------------------------------------------------------------|
-| `AWS_RDS_sostenibilidad.json`      | Resumen de sostenibilidad por modo de transporte                 |
-| `AWS_RDS_carpooling.json`          | Resumen de rutas de carpooling por estado                        |
-| `AWS_RDS_desplazamientos.json`     | Evolución temporal mensual de los desplazamientos                |
-
-Cada informe ejecuta una consulta básica contra MariaDB RDS, por lo que el flujo completo realiza tres consultas en total. El formato JSON mantiene el bloque `metadatos` y una sección de resultados por informe.
-
-### 8.5. Orden recomendado del flujo AWS
+### 8.4. Orden recomendado del flujo AWS (inicialización y poblado)
 
 ```bash
 # 1. Crear/arrancar la instancia, la base de datos y las tablas
-python python/aws/RDS/init_RDS.py
+python aws/RDS/init_RDS.py
 
 # 2. Poblar MariaDB RDS
-python python/aws/RDS/seed.py
-
-# 3. Generar los informes JSON
-python python/aws/RDS/generate_reports.py
+python aws/RDS/seed.py
 ```
+
+Para generar el informe JSON unificado, continúa en la [sección 10](#10-informe-unificado-aws).
 
 ---
 
@@ -449,10 +429,10 @@ Comprueba que `Docker/.env` contiene `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `AWS_SE
 
 ### 9.2. Inicialización de las tablas
 
-Desde la raíz del proyecto, con el entorno virtual activado:
+Desde el directorio `python/`, con el entorno virtual activado:
 
 ```bash
-python python/aws/DynamoDB/init_DynamoDB.py
+python aws/DynamoDB/init_DynamoDB.py
 ```
 
 El script realiza las siguientes operaciones:
@@ -474,7 +454,7 @@ El script realiza las siguientes operaciones:
 ### 9.3. Poblado con datos sintéticos
 
 ```bash
-python python/aws/DynamoDB/seed.py
+python aws/DynamoDB/seed.py
 ```
 
 Genera 50 ítems por tabla con `Faker` en español (`es_ES`):
@@ -493,7 +473,7 @@ Los ids de ruta (`1`-`60`) y usuario (`1`-`100`) coinciden con los rangos del se
 ### 9.4. Comprobación de conexión
 
 ```bash
-python python/aws/DynamoDB/conexion.py
+python aws/DynamoDB/conexion.py
 ```
 
 Imprime la respuesta de `list_tables()` con las tablas disponibles en la cuenta y región configuradas.
@@ -504,21 +484,21 @@ Imprime la respuesta de `list_tables()` con las tablas disponibles en la cuenta 
 
 | Comando                     | Prueba                                                                 |
 |-----------------------------|------------------------------------------------------------------------|
-| `python pruebas.py --1`     | Crea tres registros en cada tabla (`put_item`)                          |
-| `python pruebas.py --2`     | Obtiene un registro de cada tabla (`get_item`)                          |
-| `python pruebas.py --3`     | Actualiza un registro de cada tabla (`update_item`)                     |
-| `python pruebas.py --4`     | Elimina un registro de cada tabla (`delete_item`)                       |
-| `python pruebas.py --5`     | Obtiene todos los registros de cada tabla con `scan` paginado            |
-| `python pruebas.py --6`     | Filtra con `scan` y usa el GSI en `POSICIONES_TIEMPO_REAL`               |
-| `python pruebas.py --7`     | Eliminación condicional; localiza el ítem mediante el GSI               |
-| `python pruebas.py --8`     | Combina varios filtros con `Attr` en cada tabla                         |
-| `python pruebas.py --9`     | Consultas PartiQL, incluidas las del LSI y el GSI                       |
-| `python pruebas.py --todas` | Ejecuta las nueve pruebas del 1 al 9                                    |
+| `python aws/DynamoDB/pruebas.py --1`     | Crea tres registros en cada tabla (`put_item`)                          |
+| `python aws/DynamoDB/pruebas.py --2`     | Obtiene un registro de cada tabla (`get_item`)                          |
+| `python aws/DynamoDB/pruebas.py --3`     | Actualiza un registro de cada tabla (`update_item`)                     |
+| `python aws/DynamoDB/pruebas.py --4`     | Elimina un registro de cada tabla (`delete_item`)                       |
+| `python aws/DynamoDB/pruebas.py --5`     | Obtiene todos los registros de cada tabla con `scan` paginado            |
+| `python aws/DynamoDB/pruebas.py --6`     | Filtra con `scan` y usa el GSI en `POSICIONES_TIEMPO_REAL`               |
+| `python aws/DynamoDB/pruebas.py --7`     | Eliminación condicional; localiza el ítem mediante el GSI               |
+| `python aws/DynamoDB/pruebas.py --8`     | Combina varios filtros con `Attr` en cada tabla                         |
+| `python aws/DynamoDB/pruebas.py --9`     | Consultas PartiQL, incluidas las del LSI y el GSI                       |
+| `python aws/DynamoDB/pruebas.py --todas` | Ejecuta las nueve pruebas del 1 al 9                                    |
 
-Ejecútalo desde `python/aws/DynamoDB/` o con la ruta completa desde la raíz:
+Ejecútalo desde el directorio `python/`:
 
 ```bash
-python python/aws/DynamoDB/pruebas.py --todas
+python aws/DynamoDB/pruebas.py --todas
 ```
 
 > [!IMPORTANT]
@@ -527,7 +507,7 @@ python python/aws/DynamoDB/pruebas.py --todas
 ### 9.6. Limpieza de datos
 
 ```bash
-python python/aws/DynamoDB/flushdb.py
+python aws/DynamoDB/flushdb.py
 ```
 
 Elimina todos los ítems de las tres tablas mediante `scan` y `batch_writer`, pero conserva las tablas, sus índices y la configuración de TTL. Omite las tablas que no existan.
@@ -539,26 +519,88 @@ Elimina todos los ítems de las tres tablas mediante `scan` y `batch_writer`, pe
 
 ```bash
 # 1. Crear las tablas, los índices y el TTL; actualizar el visor
-python python/aws/DynamoDB/init_DynamoDB.py
+python aws/DynamoDB/init_DynamoDB.py
 
 # 2. Poblar las tres tablas
-python python/aws/DynamoDB/seed.py
+python aws/DynamoDB/seed.py
 
 # 3. Comprobar conexión
-python python/aws/DynamoDB/conexion.py
+python aws/DynamoDB/conexion.py
 
 # 4. Ejecutar las pruebas (opcional)
-python python/aws/DynamoDB/pruebas.py --todas
+python aws/DynamoDB/pruebas.py --todas
 
 # 5. Vaciar los ítems cuando ya no se necesiten (opcional)
-python python/aws/DynamoDB/flushdb.py
+python aws/DynamoDB/flushdb.py
+
+# 6. Generar el informe unificado (sección 10)
+python aws/generate_reports.py
 ```
 
 ---
 
-## 10. Visores de bases de datos
+## 10. Informe unificado AWS
 
-### 10.1. DbGate
+El script `aws/generate_reports.py` consulta MariaDB en AWS RDS y las tres tablas de Amazon DynamoDB aplicando filtros en ambos orígenes, y genera **un único archivo JSON**. Sustituye a los antiguos informes independientes de RDS.
+
+### 10.1. Generación
+
+Desde el directorio `python/`, con el entorno virtual activado y ambas bases de datos AWS inicializadas y pobladas:
+
+```bash
+python aws/generate_reports.py
+```
+
+El resultado se guarda en:
+
+```text
+json_reports/Date_YYYY_MM_DD_Hour_HH-MM-SS/AWS_report.json
+```
+
+El script es autocontenido: no depende de `aws/RDS/generate_reports.py` y lee toda su configuración desde `Docker/.env`.
+
+### 10.2. Estructura del JSON
+
+| Sección        | Contenido                                                                 |
+|----------------|---------------------------------------------------------------------------|
+| `metadatos`    | Script generador, fecha de generación, fuentes y nombre del archivo       |
+| `aws_rds`      | Tres informes de MariaDB RDS: sostenibilidad, carpooling y desplazamientos |
+| `aws_dynamodb` | Tres informes de DynamoDB: mensajes, notificaciones y posiciones           |
+| `errores`      | Lista de secciones que no se pudieron generar                             |
+
+Cada informe incluye su propio bloque `metadatos` con el motor, la tabla o consulta, la fecha, el enfoque analítico y los filtros aplicados.
+
+### 10.3. Filtros aplicados
+
+| Origen    | Consulta / tabla          | Filtro                                                                                      |
+|-----------|---------------------------|---------------------------------------------------------------------------------------------|
+| RDS       | Sostenibilidad            | `modo_transporte IN ('Bicicleta', 'Autobus', 'Carpooling')`                                   |
+| RDS       | Carpooling                | `estado IN ('Programada', 'En_Curso')`                                                       |
+| RDS       | Desplazamientos           | `fecha_desplazamiento >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)`                              |
+| DynamoDB  | `MENSAJES_RUTA`           | `id_ruta` entre 1 y 60 y `leido = False`                                                     |
+| DynamoDB  | `NOTIFICACIONES_USUARIO`  | `leida = False` y `tipo` en `reserva_confirmada` o `recordatorio_salida`                      |
+| DynamoDB  | `POSICIONES_TIEMPO_REAL`  | `velocidad_kmh` entre 20 y 110 e `id_usuario >= 1`                                            |
+
+### 10.4. Orden recomendado completo
+
+```bash
+# RDS
+python aws/RDS/init_RDS.py
+python aws/RDS/seed.py
+
+# DynamoDB
+python aws/DynamoDB/init_DynamoDB.py
+python aws/DynamoDB/seed.py
+
+# Informe unificado
+python aws/generate_reports.py
+```
+
+---
+
+## 11. Visores de bases de datos
+
+### 11.1. DbGate
 
 **URL:** [http://localhost:8080](http://localhost:8080)
 
@@ -584,7 +626,7 @@ El certificado se obtiene con el servicio `rds-cert` y se monta en DbGate desde 
 
 Las conexiones se definen por variables de entorno en el `docker-compose.yml`, por lo que **no se pueden editar desde la interfaz**. Para modificarlas, cambia el compose y reinicia el servicio.
 
-### 10.2. Particularidades de Redis en el visor
+### 11.2. Particularidades de Redis en el visor
 
 - Redis tiene **16 bases de datos lógicas** (`db0` a `db15`) y DbGate las muestra todas, aunque estén vacías. Los scripts de este proyecto usan **`db0`**.
 - Haz doble clic en `db0` para abrir el explorador de claves y pulsa **refrescar** tras ejecutar scripts; el visor no se actualiza solo.
@@ -595,7 +637,7 @@ Las conexiones se definen por variables de entorno en el `docker-compose.yml`, p
 docker exec -it contenedor-smartruta-redis redis-cli JSON.GET smartruta:mysql:usuarios_json
 ```
 
-### 10.3. DynamoDB Admin
+### 11.3. DynamoDB Admin
 
 **URL:** [http://localhost:8001](http://localhost:8001)
 
@@ -608,11 +650,11 @@ Es el visor web de DynamoDB (`aaronshaf/dynamodb-admin:latest`). Se conecta dire
 
 ---
 
-## 11. Scripts de Redis
+## 12. Scripts de Redis
 
 Se ejecutan desde el directorio `python/` con el entorno virtual activado y los servicios locales levantados.
 
-### 11.1. Comprobación de conexión
+### 12.1. Comprobación de conexión
 
 ```bash
 python redis/conexion.py
@@ -620,7 +662,7 @@ python redis/conexion.py
 
 Comprueba que Redis responde en `localhost:6379`.
 
-### 11.2. Pruebas 1-20
+### 12.2. Pruebas 1-20
 
 Cubren claves-valor, patrones de búsqueda, filtros, estructuras JSON, listas e índices con RediSearch (búsqueda y *group by*).
 
@@ -631,7 +673,7 @@ python redis/pruebas_1_20.py
 > [!WARNING]
 > El script vacía la base de datos Redis `db0` al comenzar. No lo ejecutes si tienes datos que quieras conservar.
 
-### 11.3. Script 21: MySQL → Redis
+### 12.3. Script 21: MySQL → Redis
 
 Ejecuta en MySQL una consulta SQL con `JOIN` entre `USUARIOS` y `DIRECCIONES` y guarda el resultado en Redis (`db0`):
 
@@ -648,7 +690,7 @@ Es idempotente: borra la importación anterior antes de escribir. Requiere haber
 python redis/script_21.py
 ```
 
-### 11.4. Script 22: Redis → PostgreSQL
+### 12.4. Script 22: Redis → PostgreSQL
 
 Lee de Redis los usuarios que dejó el script 21 (los hashes o, si no existen, el JSON completo) y los inserta o actualiza en la tabla `USUARIOS_DESDE_REDIS` de PostgreSQL, que crea si no existe.
 
@@ -659,7 +701,7 @@ python redis/script_22.py
 > [!IMPORTANT]
 > Ejecuta el script 21 antes que el 22. Si lanzas las pruebas 1-20 entre ambos, los datos del script 21 se borran de Redis y el 22 no encontrará nada que importar.
 
-### 11.5. Vaciar Redis
+### 12.5. Vaciar Redis
 
 Para vaciar manualmente la base de datos `db0`:
 
@@ -678,7 +720,7 @@ docker exec -it contenedor-smartruta-redis redis-cli INFO keyspace
 
 ---
 
-## 12. Documentación por motor
+## 13. Documentación por motor
 
 En la carpeta [`docs/`](docs/) está la guía de cada base de datos, junto con la explicación detallada de su análisis e informe:
 
@@ -687,10 +729,10 @@ En la carpeta [`docs/`](docs/) está la guía de cada base de datos, junto con l
 - [MariaDB: despliegue y análisis](docs/mariadb.md)
 - [Redis: despliegue](docs/redis.md)
 
-No hay una guía específica para DynamoDB: su documentación está en la [sección 9](#9-pipeline-en-aws-dynamodb). El [diagrama ER](#13-diagrama-er) cubre únicamente el modelo relacional local.
+No hay una guía específica para DynamoDB: su documentación está en la [sección 9](#9-pipeline-en-aws-dynamodb). El [diagrama ER](#14-diagrama-er) cubre únicamente el modelo relacional local.
 
 ---
 
-## 13. Diagrama ER
+## 14. Diagrama ER
 
 ![Diagrama entidad-relación](docs/Diagrama%20ER.png)
